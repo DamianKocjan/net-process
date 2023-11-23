@@ -1,10 +1,12 @@
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
 pub struct NetworkData {
     received: u64,
     sent: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct InterfaceStats {
     bytes: NetworkData,
     unicast_packets: NetworkData,
@@ -14,7 +16,7 @@ pub struct InterfaceStats {
     unknown_protocols: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct IpV4Statistics {
     packets_received: u64,
     received_header_errors: u64,
@@ -35,7 +37,7 @@ pub struct IpV4Statistics {
     fragments_created: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct IpV6Statistics {
     packets_received: u64,
     received_header_errors: u64,
@@ -56,7 +58,7 @@ pub struct IpV6Statistics {
     fragments_created: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct IcmpV4Statistics {
     messages: NetworkData,
     errors: NetworkData,
@@ -75,7 +77,7 @@ pub struct IcmpV4Statistics {
     router_advertisements: NetworkData,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct IcmpV6Statistics {
     messages: NetworkData,
     errors: NetworkData,
@@ -96,7 +98,7 @@ pub struct IcmpV6Statistics {
     router_renumberings: NetworkData,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct TcpV4Statistics {
     active_opens: u64,
     passive_opens: u64,
@@ -108,7 +110,7 @@ pub struct TcpV4Statistics {
     segments_retransmitted: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct TcpV6Statistics {
     active_opens: u64,
     passive_opens: u64,
@@ -120,7 +122,7 @@ pub struct TcpV6Statistics {
     segments_retransmitted: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct UdpV4Statistics {
     datagrams_received: u64,
     no_ports: u64,
@@ -128,7 +130,7 @@ pub struct UdpV4Statistics {
     datagrams_sent: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct UdpV6Statistics {
     datagrams_received: u64,
     no_ports: u64,
@@ -136,7 +138,7 @@ pub struct UdpV6Statistics {
     datagrams_sent: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct NetworkStatistics {
     interface: InterfaceStats,
     ipv4: IpV4Statistics,
