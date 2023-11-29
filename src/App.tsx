@@ -277,16 +277,22 @@ function App() {
                     "sent" in netStatResult[key][key2] ? (
                       <span className="tabular-nums">
                         <span
-                          title={`Received: ${(+netStatResult[key][key2]
-                            .received).toLocaleString()}`}
+                          title={`Received: ${(+(
+                            // @ts-expect-error - I know what I'm doing
+                            netStatResult[key][key2].received
+                          )).toLocaleString()}`}
                         >
+                          {/* @ts-expect-error - I know what I'm doing */}
                           {prettyBytes(netStatResult[key][key2].received)}
                         </span>
                         {" / "}
                         <span
-                          title={`Sent: ${(+netStatResult[key][key2]
-                            .sent).toLocaleString()}`}
+                          title={`Sent: ${(+(
+                            // @ts-expect-error - I know what I'm doing
+                            netStatResult[key][key2].sent
+                          )).toLocaleString()}`}
                         >
+                          {/* @ts-expect-error - I know what I'm doing */}
                           {prettyBytes(netStatResult[key][key2].sent)}
                         </span>
                       </span>
