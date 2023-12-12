@@ -1224,6 +1224,7 @@ pub struct Process {
     pub image_name: String,
     pub pid: String,
     pub session_name: String,
+    pub session_number: String,
 }
 
 // FIXME: This is a mess, windows is a mess :(
@@ -1236,50 +1237,26 @@ pub fn parse_processes(input: &str) -> Vec<Process> {
         .lines()
         .map(|line| line.trim())
         .filter(|line| !line.is_empty())
-        .skip(5);
+        .skip(1);
 
     for line in lines {
-        let tokens: Vec<&str> = line.split_whitespace().collect();
+        let tokens: Vec<&str> = line.split(",").collect();
 
-        if tokens.len() < 3 {
+        if tokens.len() < 5 {
             continue;
         }
 
-        if tokens[0].contains(".") {
-            let image_name = tokens[0].to_string();
-            let pid = tokens[1].to_string();
-            let session_name = tokens[2].to_string();
-            processes.push(Process {
-                image_name,
-                pid,
-                session_name,
-            });
-            continue;
-        }
-
-        let mut image_name_pieces = Vec::new();
-        let mut image_name_end = 0;
-        for &token in tokens.iter().take_while(|token| !token.contains(".")) {
-            image_name_pieces.push(token);
-            image_name_end += 1;
-        }
-
-        let pid = tokens[image_name_end - 1].to_string();
-        let session_name = tokens[image_name_end - 1].to_string();
-
-        let mut image_name = image_name_pieces.join(" ");
-        image_name.push_str(".exe");
-
-        // If the pid is not a number, skip this process
-        // Why we need to do this? Because windows is a mess...
-        if u128::from_str_radix(&pid, 10).is_err() {
-            continue;
-        }
+        // prettify field values from `\"value\"` to `value`
+        let image_name = tokens[0].trim_matches('"').to_string();
+        let pid = tokens[1].trim_matches('"').to_string();
+        let session_name = tokens[2].trim_matches('"').to_string();
+        let session_number = tokens[3].trim_matches('"').to_string();
 
         processes.push(Process {
             image_name,
             pid,
             session_name,
+            session_number,
         });
     }
 
@@ -1721,228 +1698,237 @@ mod tests {
     #[test]
     fn test_parse_processes() {
         let input = r#"
-        Image Name                     PID Session Name        Session#    Mem Usage
-        ========================= ======== ================ =========== ============
-        System Idle Process              0 Services                   0          8 K
-        System                           4 Services                   0        144 K
-        Registry                       172 Services                   0    106 440 K
-        smss.exe                       548 Services                   0      1 112 K
-        csrss.exe                      884 Services                   0      5 836 K
-        wininit.exe                    972 Services                   0      6 740 K
-        services.exe                   672 Services                   0     12 176 K
-        lsass.exe                      660 Services                   0     20 660 K
-        svchost.exe                   1104 Services                   0     27 792 K
-        fontdrvhost.exe               1132 Services                   0      3 056 K
-        svchost.exe                   1192 Services                   0     15 792 K
-        svchost.exe                   1248 Services                   0     10 516 K
-        svchost.exe                   1520 Services                   0     10 640 K
-        svchost.exe                   1600 Services                   0      7 512 K
-        svchost.exe                   1608 Services                   0     11 504 K
-        svchost.exe                   1624 Services                   0     11 644 K
-        svchost.exe                   1752 Services                   0     15 000 K
-        svchost.exe                   1776 Services                   0     10 056 K
-        svchost.exe                   1784 Services                   0     13 216 K
-        svchost.exe                   1796 Services                   0     11 544 K
-        svchost.exe                   1984 Services                   0     11 416 K
-        svchost.exe                   2004 Services                   0      5 976 K
-        svchost.exe                    844 Services                   0     15 664 K
-        svchost.exe                   1704 Services                   0      8 124 K
-        svchost.exe                   2052 Services                   0     10 132 K
-        svchost.exe                   2136 Services                   0      5 712 K
-        svchost.exe                   2252 Services                   0      6 984 K
-        svchost.exe                   2344 Services                   0      7 212 K
-        svchost.exe                   2424 Services                   0     11 384 K
-        svchost.exe                   2452 Services                   0      7 844 K
-        dasHost.exe                   2556 Services                   0     13 472 K
-        svchost.exe                   2576 Services                   0      9 992 K
-        svchost.exe                   2616 Services                   0      6 664 K
-        svchost.exe                   2648 Services                   0     11 120 K
-        svchost.exe                   2780 Services                   0     17 784 K
-        NVDisplay.Container.exe       2812 Services                   0     18 920 K
-        svchost.exe                   2820 Services                   0      7 308 K
-        svchost.exe                   2896 Services                   0      8 624 K
-        svchost.exe                   2960 Services                   0      5 516 K
-        svchost.exe                   2968 Services                   0     14 092 K
-        svchost.exe                   2976 Services                   0      7 172 K
-        Memory Compression            2164 Services                   0    287 860 K
-        svchost.exe                   2656 Services                   0      7 840 K
-        svchost.exe                   2920 Services                   0      7 608 K
-        svchost.exe                   3020 Services                   0      9 192 K
-        svchost.exe                   3240 Services                   0     16 888 K
-        svchost.exe                   3344 Services                   0      7 092 K
-        svchost.exe                   3424 Services                   0      6 684 K
-        svchost.exe                   3632 Services                   0      7 480 K
-        svchost.exe                   3720 Services                   0      7 852 K
-        svchost.exe                   3920 Services                   0      6 712 K
-        svchost.exe                   3952 Services                   0      8 280 K
-        svchost.exe                   4344 Services                   0     15 324 K
-        svchost.exe                   4484 Services                   0      9 520 K
-        svchost.exe                   4492 Services                   0      6 448 K
-        svchost.exe                   4664 Services                   0     16 316 K
-        svchost.exe                   4748 Services                   0     16 292 K
-        svchost.exe                   4828 Services                   0     13 060 K
-        spoolsv.exe                   4888 Services                   0     12 676 K
-        svchost.exe                   5008 Services                   0      9 624 K
-        svchost.exe                   4644 Services                   0     12 776 K
-        RtkAudUService64.exe          4680 Services                   0      9 088 K
-        nvcontainer.exe               5124 Services                   0     37 828 K
-        svchost.exe                   5140 Services                   0      5 780 K
-        svchost.exe                   5148 Services                   0     35 732 K
-        MsMpEng.exe                   5156 Services                   0    351 740 K
-        RtkBtManServ.exe              5164 Services                   0      6 420 K
-        svchost.exe                   5172 Services                   0      7 568 K
-        svchost.exe                   5180 Services                   0     27 228 K
-        pg_ctl.exe                    5212 Services                   0      5 268 K
-        svchost.exe                   5228 Services                   0      5 220 K
-        svchost.exe                   5236 Services                   0     20 512 K
-        wslservice.exe                5248 Services                   0     16 476 K
-        MBAMService.exe               5288 Services                   0     58 212 K
-        sqlwriter.exe                 5296 Services                   0      7 496 K
-        svchost.exe                   5424 Services                   0      6 548 K
-        svchost.exe                   5608 Services                   0      5 032 K
-        wallpaperservice32_c.exe      5896 Services                   0      4 956 K
-        SearchIndexer.exe             5936 Services                   0     49 932 K
-        svchost.exe                   6048 Services                   0      9 792 K
-        svchost.exe                   4528 Services                   0      8 736 K
-        svchost.exe                   6164 Services                   0     11 964 K
-        com.docker.service            6268 Services                   0     31 652 K
-        postgres.exe                  7292 Services                   0     18 520 K
-        conhost.exe                   7348 Services                   0      6 988 K
-        postgres.exe                  7556 Services                   0      6 744 K
-        postgres.exe                  7752 Services                   0      8 300 K
-        postgres.exe                  7760 Services                   0      8 108 K
-        postgres.exe                  7780 Services                   0     11 116 K
-        postgres.exe                  7800 Services                   0      7 672 K
-        postgres.exe                  7832 Services                   0      7 092 K
-        postgres.exe                  7852 Services                   0      7 372 K
-        NisSrv.exe                    7980 Services                   0     11 868 K
-        svchost.exe                   8424 Services                   0     16 916 K
-        svchost.exe                   8432 Services                   0      7 596 K
-        svchost.exe                   8812 Services                   0     21 204 K
-        svchost.exe                   8724 Services                   0     22 888 K
-        svchost.exe                  10536 Services                   0      6 624 K
-        svchost.exe                  10680 Services                   0      8 200 K
-        dllhost.exe                   9348 Services                   0     10 276 K
-        svchost.exe                  14000 Services                   0     16 916 K
-        svchost.exe                  10256 Services                   0     12 428 K
-        SecurityHealthService.exe    13508 Services                   0     16 720 K
-        svchost.exe                  15096 Services                   0     12 348 K
-        audiodg.exe                   7572 Services                   0     17 104 K
-        svchost.exe                  15652 Services                   0      9 096 K
-        SgrmBroker.exe               14324 Services                   0      7 804 K
-        svchost.exe                  14316 Services                   0     10 280 K
-        svchost.exe                  12060 Services                   0      6 104 K
-        svchost.exe                   5208 Services                   0     12 172 K
-        svchost.exe                   3556 Services                   0      9 712 K
-        csrss.exe                    13196 Console                    3      6 484 K
-        winlogon.exe                 10024 Console                    3     10 620 K
-        fontdrvhost.exe              17236 Console                    3      5 856 K
-        dwm.exe                       8612 Console                    3     54 756 K
-        NVDisplay.Container.exe       6608 Console                    3     50 272 K
-        svchost.exe                  12296 Services                   0      5 588 K
-        mbamtray.exe                 10872 Console                    3     42 756 K
-        ctfmon.exe                   16948 Console                    3     20 668 K
-        sihost.exe                   17360 Console                    3     26 572 K
-        svchost.exe                  16228 Console                    3      8 584 K
-        svchost.exe                  16944 Console                    3     28 572 K
-        nvcontainer.exe              13128 Console                    3     28 832 K
-        wallpaper64.exe              16996 Console                    3     14 604 K
-        svchost.exe                   7532 Console                    3     37 540 K
-        nvcontainer.exe              17092 Console                    3     44 772 K
-        taskhostw.exe                 4476 Console                    3     18 236 K
-        explorer.exe                  5468 Console                    3    132 808 K
-        svchost.exe                  14304 Console                    3     21 236 K
-        NVIDIA Web Helper.exe         3368 Console                    3     25 164 K
-        conhost.exe                   9652 Console                    3      1 144 K
-        StartMenuExperienceHost.e     2120 Console                    3     68 060 K
-        RuntimeBroker.exe             7908 Console                    3     23 036 K
-        SearchApp.exe                12704 Console                    3     99 220 K
-        RuntimeBroker.exe             9712 Console                    3     33 896 K
-        RuntimeBroker.exe            16064 Console                    3     20 984 K
-        dllhost.exe                    696 Console                    3     14 572 K
-        nvsphelper64.exe             13124 Console                    3     13 252 K
-        NVIDIA Share.exe             17404 Console                    3     56 752 K
-        NVIDIA Share.exe              3620 Console                    3     32 316 K
-        NVIDIA Share.exe              7152 Console                    3     54 432 K
-        TextInputHost.exe             8396 Console                    3     46 156 K
-        SecurityHealthSystray.exe     9124 Console                    3      9 592 K
-        RtkAudUService64.exe         12308 Console                    3      8 796 K
-        Discord.exe                  13724 Console                    3     81 808 K
-        msedge.exe                   15372 Console                    3     84 204 K
-        msedge.exe                   14788 Console                    3      7 476 K
-        msedge.exe                   15936 Console                    3     31 692 K
-        msedge.exe                    3676 Console                    3     29 696 K
-        msedge.exe                    5828 Console                    3     15 840 K
-        Discord.exe                   8564 Console                    3     26 760 K
-        Discord.exe                  13476 Console                    3    132 252 K
-        Discord.exe                   2128 Console                    3     44 596 K
-        Discord.exe                  12648 Console                    3    278 504 K
-        Discord.exe                   8452 Console                    3     63 320 K
-        ApplicationFrameHost.exe      8948 Console                    3     25 692 K
-        CalculatorApp.exe             9648 Console                    3      1 956 K
-        RuntimeBroker.exe             3044 Console                    3      7 148 K
-        svchost.exe                  14260 Console                    3     12 252 K
-        firefox.exe                   9984 Console                    3    497 776 K
-        firefox.exe                  14384 Console                    3    150 588 K
-        firefox.exe                  13848 Console                    3     14 412 K
-        firefox.exe                   4568 Console                    3    101 896 K
-        firefox.exe                   2768 Console                    3    278 036 K
-        firefox.exe                  14776 Console                    3     15 496 K
-        firefox.exe                  11784 Console                    3    262 568 K
-        firefox.exe                   4292 Console                    3    540 932 K
-        firefox.exe                   6940 Console                    3     25 796 K
-        firefox.exe                  14664 Console                    3     17 132 K
-        firefox.exe                  15120 Console                    3     38 792 K
-        ShellExperienceHost.exe       1284 Console                    3     46 756 K
-        RuntimeBroker.exe            11856 Console                    3     19 608 K
-        UserOOBEBroker.exe            2808 Console                    3     10 080 K
-        firefox.exe                  14800 Console                    3    312 856 K
-        Spotify.exe                   9964 Console                    3    224 068 K
-        Spotify.exe                   8064 Console                    3     17 368 K
-        Spotify.exe                  12404 Console                    3    118 300 K
-        Spotify.exe                  14764 Console                    3     26 896 K
-        Spotify.exe                  10944 Console                    3     42 412 K
-        Spotify.exe                  15108 Console                    3    217 716 K
-        Code.exe                     13280 Console                    3    101 376 K
-        Code.exe                     14984 Console                    3     94 628 K
-        Code.exe                     13612 Console                    3     41 500 K
-        Code.exe                      8308 Console                    3    191 004 K
-        Code.exe                      8832 Console                    3    220 656 K
-        Code.exe                      9724 Console                    3     98 676 K
-        Code.exe                      7476 Console                    3     75 636 K
-        Code.exe                     11076 Console                    3     85 628 K
-        conhost.exe                   1452 Console                    3      6 780 K
-        cmd.exe                       2872 Console                    3      4 252 K
-        rust-analyzer.exe            15764 Console                    3  1 858 952 K
-        conhost.exe                  15132 Console                    3     11 464 K
-        powershell.exe               14220 Console                    3     78 668 K
-        conhost.exe                  14188 Console                    3      8 104 K
-        Code.exe                      9132 Console                    3     80 016 K
-        Code.exe                      4112 Console                    3     98 888 K
-        rust-analyzer-proc-macro-     1552 Console                    3     22 964 K
-        firefox.exe                  11208 Console                    3     37 144 K
-        svchost.exe                  12144 Services                   0      7 620 K
-        wgc.exe                      16340 Console                    3    106 620 K
-        WargamingErrorMonitor.exe     2332 Console                    3     12 844 K
-        SearchProtocolHost.exe       12564 Services                   0     13 684 K
-        SearchFilterHost.exe          2804 Services                   0      7 756 K
-        WindowsTerminal.exe           9940 Console                    3     82 708 K
-        OpenConsole.exe               1200 Console                    3      9 060 K
-        pwsh.exe                     17152 Console                    3    104 796 K
-        RuntimeBroker.exe            14924 Console                    3     13 056 K
-        wgc_renderer_host.exe         9256 Console                    3     81 440 K
-        WmiPrvSE.exe                 16336 Services                   0     14 020 K
-        wgc_renderer_host.exe         4164 Console                    3     31 088 K
-        svchost.exe                  14600 Services                   0     12 220 K
-        wgc_renderer_host.exe        12096 Console                    3     23 236 K
-        wgc_renderer_host.exe         2356 Console                    3     30 156 K
-        wgc_renderer_host.exe        13752 Console                    3    100 400 K
-        WorldOfTanks.exe              7144 Console                    3    513 920 K
-        WargamingErrorMonitor.exe    12248 Console                    3     11 460 K
-        firefox.exe                   3528 Console                    3     36 144 K
-        svchost.exe                   9820 Services                   0     10 068 K
-        firefox.exe                  16784 Console                    3     36 136 K
-        tasklist.exe                 12128 Console                    3      9 432 K
+        "Image Name","PID","Session Name","Session#","Mem Usage"
+        "System Idle Process","0","Services","0","8 K"
+        "System","4","Services","0","144 K"
+        "Registry","172","Services","0","84 496 K"
+        "smss.exe","544","Services","0","1 052 K"
+        "csrss.exe","880","Services","0","5 632 K"
+        "wininit.exe","964","Services","0","6 976 K"
+        "csrss.exe","976","Console","1","6 236 K"
+        "services.exe","632","Services","0","13 208 K"
+        "lsass.exe","668","Services","0","22 568 K"
+        "svchost.exe","1056","Services","0","28 256 K"
+        "fontdrvhost.exe","1084","Services","0","2 692 K"
+        "svchost.exe","1144","Services","0","15 812 K"
+        "svchost.exe","1200","Services","0","10 816 K"
+        "winlogon.exe","1252","Console","1","12 312 K"
+        "fontdrvhost.exe","1320","Console","1","5 628 K"
+        "dwm.exe","1396","Console","1","52 620 K"
+        "svchost.exe","1472","Services","0","11 644 K"
+        "svchost.exe","1552","Services","0","5 176 K"
+        "svchost.exe","1624","Services","0","17 536 K"
+        "svchost.exe","1644","Services","0","15 604 K"
+        "svchost.exe","1688","Services","0","10 524 K"
+        "svchost.exe","1696","Services","0","13 828 K"
+        "svchost.exe","1704","Services","0","11 996 K"
+        "svchost.exe","1836","Services","0","7 396 K"
+        "svchost.exe","1864","Services","0","11 516 K"
+        "svchost.exe","1896","Services","0","6 500 K"
+        "svchost.exe","1936","Services","0","7 652 K"
+        "svchost.exe","2000","Services","0","6 028 K"
+        "svchost.exe","2072","Services","0","11 096 K"
+        "svchost.exe","2108","Services","0","11 432 K"
+        "svchost.exe","2200","Services","0","10 120 K"
+        "svchost.exe","2312","Services","0","7 104 K"
+        "svchost.exe","2372","Services","0","7 440 K"
+        "NVDisplay.Container.exe","2484","Services","0","19 192 K"
+        "svchost.exe","2492","Services","0","8 224 K"
+        "svchost.exe","2704","Services","0","5 944 K"
+        "svchost.exe","2712","Services","0","14 340 K"
+        "svchost.exe","2720","Services","0","7 848 K"
+        "NVDisplay.Container.exe","2796","Console","1","51 400 K"
+        "Memory Compression","2836","Services","0","554 360 K"
+        "svchost.exe","2872","Services","0","8 104 K"
+        "svchost.exe","2904","Services","0","18 180 K"
+        "svchost.exe","2928","Services","0","8 084 K"
+        "svchost.exe","2936","Services","0","9 348 K"
+        "svchost.exe","2156","Services","0","7 676 K"
+        "svchost.exe","3092","Services","0","6 812 K"
+        "svchost.exe","3264","Services","0","8 196 K"
+        "svchost.exe","3320","Services","0","8 716 K"
+        "svchost.exe","3600","Services","0","8 620 K"
+        "svchost.exe","3956","Services","0","14 436 K"
+        "svchost.exe","4064","Services","0","17 924 K"
+        "svchost.exe","3224","Services","0","10 092 K"
+        "svchost.exe","3216","Services","0","6 852 K"
+        "svchost.exe","3876","Services","0","58 240 K"
+        "svchost.exe","3892","Services","0","27 360 K"
+        "svchost.exe","2996","Services","0","18 040 K"
+        "svchost.exe","4240","Services","0","16 932 K"
+        "svchost.exe","4296","Services","0","10 540 K"
+        "svchost.exe","4304","Services","0","14 392 K"
+        "svchost.exe","4316","Services","0","13 184 K"
+        "spoolsv.exe","4584","Services","0","14 148 K"
+        "svchost.exe","4812","Services","0","6 368 K"
+        "svchost.exe","4820","Services","0","13 636 K"
+        "svchost.exe","4828","Services","0","33 888 K"
+        "svchost.exe","4836","Services","0","6 420 K"
+        "RtkAudUService64.exe","4844","Services","0","10 144 K"
+        "svchost.exe","4852","Services","0","35 404 K"
+        "RtkBtManServ.exe","4860","Services","0","6 904 K"
+        "svchost.exe","4868","Services","0","8 372 K"
+        "svchost.exe","4876","Services","0","5 728 K"
+        "svchost.exe","4884","Services","0","20 920 K"
+        "pg_ctl.exe","4892","Services","0","6 004 K"
+        "sqlwriter.exe","4900","Services","0","8 072 K"
+        "nvcontainer.exe","4908","Services","0","38 580 K"
+        "MsMpEng.exe","4940","Services","0","308 528 K"
+        "wslservice.exe","4956","Services","0","19 124 K"
+        "MBAMService.exe","4968","Services","0","59 264 K"
+        "svchost.exe","5064","Services","0","7 248 K"
+        "svchost.exe","5040","Services","0","5 428 K"
+        "dasHost.exe","5176","Services","0","12 724 K"
+        "svchost.exe","5568","Services","0","9 356 K"
+        "com.docker.service","5760","Services","0","34 120 K"
+        "svchost.exe","5768","Services","0","13 384 K"
+        "wallpaperservice32_c.exe","5892","Services","0","5 368 K"
+        "rundll32.exe","6208","Console","1","6 596 K"
+        "svchost.exe","6268","Services","0","7 624 K"
+        "SearchIndexer.exe","6884","Services","0","46 984 K"
+        "svchost.exe","7120","Services","0","22 120 K"
+        "postgres.exe","6416","Services","0","19 460 K"
+        "conhost.exe","3112","Services","0","7 116 K"
+        "postgres.exe","6848","Services","0","7 156 K"
+        "postgres.exe","1048","Services","0","9 056 K"
+        "postgres.exe","7284","Services","0","8 680 K"
+        "postgres.exe","7304","Services","0","11 724 K"
+        "postgres.exe","7324","Services","0","8 172 K"
+        "postgres.exe","7344","Services","0","7 540 K"
+        "postgres.exe","7364","Services","0","7 880 K"
+        "svchost.exe","7724","Services","0","7 172 K"
+        "svchost.exe","7800","Services","0","8 980 K"
+        "NisSrv.exe","8128","Services","0","11 308 K"
+        "mbamtray.exe","2640","Console","1","40 260 K"
+        "nvcontainer.exe","8220","Console","1","27 320 K"
+        "nvcontainer.exe","8256","Console","1","45 688 K"
+        "sihost.exe","8268","Console","1","27 068 K"
+        "svchost.exe","8320","Console","1","33 248 K"
+        "svchost.exe","8364","Console","1","36 128 K"
+        "taskhostw.exe","8496","Console","1","17 980 K"
+        "svchost.exe","8556","Services","0","22 184 K"
+        "wallpaper64.exe","8608","Console","1","14 488 K"
+        "svchost.exe","8880","Services","0","8 080 K"
+        "explorer.exe","8888","Console","1","179 952 K"
+        "ctfmon.exe","8952","Console","1","15 996 K"
+        "svchost.exe","9064","Services","0","18 004 K"
+        "rundll32.exe","9476","Console","1","8 720 K"
+        "svchost.exe","9520","Console","1","20 560 K"
+        "NVIDIA Web Helper.exe","9684","Console","1","17 168 K"
+        "StartMenuExperienceHost.exe","9848","Console","1","68 628 K"
+        "taskhostw.exe","9908","Console","1","17 336 K"
+        "conhost.exe","9976","Console","1","816 K"
+        "RuntimeBroker.exe","10080","Console","1","26 336 K"
+        "SearchApp.exe","8568","Console","1","94 680 K"
+        "RuntimeBroker.exe","10616","Console","1","28 344 K"
+        "RuntimeBroker.exe","10432","Console","1","21 392 K"
+        "svchost.exe","11468","Services","0","12 140 K"
+        "dllhost.exe","10484","Console","1","13 120 K"
+        "nvsphelper64.exe","12796","Console","1","13 036 K"
+        "NVIDIA Share.exe","12816","Console","1","54 984 K"
+        "NVIDIA Share.exe","13016","Console","1","33 096 K"
+        "NVIDIA Share.exe","13088","Console","1","54 648 K"
+        "TextInputHost.exe","12444","Console","1","45 796 K"
+        "SecurityHealthSystray.exe","12480","Console","1","9 392 K"
+        "SecurityHealthService.exe","12232","Services","0","16 160 K"
+        "RtkAudUService64.exe","12276","Console","1","8 212 K"
+        "Discord.exe","12776","Console","1","77 416 K"
+        "Discord.exe","13392","Console","1","26 556 K"
+        "Discord.exe","13756","Console","1","59 648 K"
+        "Discord.exe","13820","Console","1","43 728 K"
+        "svchost.exe","14164","Services","0","12 504 K"
+        "Discord.exe","14572","Console","1","202 380 K"
+        "Discord.exe","14996","Console","1","63 300 K"
+        "svchost.exe","900","Services","0","9 788 K"
+        "Code.exe","14820","Console","1","98 772 K"
+        "Code.exe","15212","Console","1","111 480 K"
+        "Code.exe","15336","Console","1","40 732 K"
+        "Code.exe","1912","Console","1","228 856 K"
+        "Code.exe","14364","Console","1","180 076 K"
+        "Code.exe","6300","Console","1","98 028 K"
+        "Code.exe","6876","Console","1","74 256 K"
+        "Code.exe","14416","Console","1","78 040 K"
+        "conhost.exe","11040","Console","1","6 476 K"
+        "cmd.exe","1412","Console","1","5 096 K"
+        "rust-analyzer.exe","11124","Console","1","904 396 K"
+        "conhost.exe","9960","Console","1","5 864 K"
+        "powershell.exe","9504","Console","1","53 824 K"
+        "conhost.exe","10884","Console","1","5 880 K"
+        "Code.exe","15480","Console","1","74 656 K"
+        "Code.exe","16372","Console","1","140 288 K"
+        "Code.exe","13100","Console","1","79 400 K"
+        "rust-analyzer-proc-macro-srv.exe","13032","Console","1","23 004 K"
+        "dllhost.exe","16028","Services","0","11 512 K"
+        "ApplicationFrameHost.exe","14684","Console","1","29 276 K"
+        "CalculatorApp.exe","13676","Console","1","1 996 K"
+        "RuntimeBroker.exe","3984","Console","1","7 296 K"
+        "SystemSettings.exe","4672","Console","1","2 544 K"
+        "UserOOBEBroker.exe","16152","Console","1","10 204 K"
+        "SgrmBroker.exe","2644","Services","0","8 300 K"
+        "svchost.exe","4424","Services","0","10 728 K"
+        "svchost.exe","14176","Console","1","12 720 K"
+        "svchost.exe","9368","Services","0","19 708 K"
+        "ShellExperienceHost.exe","4336","Console","1","55 800 K"
+        "RuntimeBroker.exe","15372","Console","1","19 468 K"
+        "firefox.exe","3740","Console","1","547 792 K"
+        "firefox.exe","11224","Console","1","120 548 K"
+        "firefox.exe","6572","Console","1","16 800 K"
+        "firefox.exe","4404","Console","1","91 072 K"
+        "firefox.exe","6100","Console","1","289 864 K"
+        "firefox.exe","11600","Console","1","15 816 K"
+        "firefox.exe","13948","Console","1","174 772 K"
+        "firefox.exe","11812","Console","1","183 952 K"
+        "firefox.exe","272","Console","1","105 820 K"
+        "firefox.exe","2060","Console","1","142 784 K"
+        "firefox.exe","9600","Console","1","220 124 K"
+        "svchost.exe","13628","Services","0","13 160 K"
+        "svchost.exe","1572","Services","0","7 588 K"
+        "svchost.exe","6800","Services","0","10 708 K"
+        "Video.UI.exe","9372","Console","1","9 008 K"
+        "RuntimeBroker.exe","3308","Console","1","8 280 K"
+        "firefox.exe","10000","Console","1","248 000 K"
+        "firefox.exe","6708","Console","1","163 936 K"
+        "firefox.exe","10608","Console","1","124 108 K"
+        "firefox.exe","14900","Console","1","175 224 K"
+        "Code.exe","2468","Console","1","153 552 K"
+        "firefox.exe","8236","Console","1","204 088 K"
+        "firefox.exe","11132","Console","1","157 804 K"
+        "firefox.exe","13672","Console","1","193 172 K"
+        "firefox.exe","828","Console","1","36 284 K"
+        "svchost.exe","13484","Services","0","8 052 K"
+        "msedge.exe","7008","Console","1","141 624 K"
+        "msedge.exe","10796","Console","1","8 068 K"
+        "msedge.exe","1816","Console","1","36 192 K"
+        "msedge.exe","11844","Console","1","31 516 K"
+        "msedge.exe","10372","Console","1","18 236 K"
+        "svchost.exe","15592","Services","0","7 612 K"
+        "node.exe","10824","Console","1","70 080 K"
+        "cmd.exe","5000","Console","1","4 968 K"
+        "node.exe","4260","Console","1","44 808 K"
+        "cmd.exe","8480","Console","1","5 000 K"
+        "node.exe","6792","Console","1","70 100 K"
+        "cmd.exe","6732","Console","1","4 976 K"
+        "node.exe","15744","Console","1","186 200 K"
+        "esbuild.exe","5520","Console","1","14 756 K"
+        "firefox.exe","8432","Console","1","36 100 K"
+        "firefox.exe","15584","Console","1","36 156 K"
+        "SearchProtocolHost.exe","14000","Services","0","13 808 K"
+        "SearchFilterHost.exe","6604","Services","0","7 744 K"
+        "RuntimeBroker.exe","1044","Console","1","22 152 K"
+        "net-process.exe","7336","Console","1","25 180 K"
+        "msedgewebview2.exe","16172","Console","1","100 988 K"
+        "msedgewebview2.exe","6172","Console","1","7 588 K"
+        "msedgewebview2.exe","10592","Console","1","55 420 K"
+        "msedgewebview2.exe","680","Console","1","29 020 K"
+        "msedgewebview2.exe","32","Console","1","17 580 K"
+        "msedgewebview2.exe","5700","Console","1","74 888 K"
+        "WmiPrvSE.exe","10480","Services","0","11 540 K"
+        "WindowsTerminal.exe","5052","Console","1","80 980 K"
+        "dllhost.exe","10292","Console","1","7 684 K"
+        "OpenConsole.exe","7028","Console","1","8 968 K"
+        "pwsh.exe","10132","Console","1","102 692 K"
+        "RuntimeBroker.exe","12044","Console","1","13 064 K"
+        "tasklist.exe","1468","Console","1","9 440 K"
         "#;
 
         let processes = parse_processes(input);
